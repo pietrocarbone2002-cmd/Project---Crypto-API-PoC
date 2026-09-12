@@ -3,16 +3,23 @@ import pandas as pd
 import os
 from dotenv import load_dotenv, dotenv_values
 import requests
+import datetime
+import matplotlib.pyplot as ppl
 
-#Extract Data from Coingecko
+#Global Variables
 
-BASE_URL = "https://pro-api.coingecko.com/api/v3/simple/price?ids"
+BASE_URL = "https://api.coingecko.com/api/v3/coins/"
 load_dotenv()
+key = os.getenv("COINGECKO_API_KEY")
 
-def extract_data(ticker_input: str):
+#================================================================================================
+#       Extract Data from Coingecko
+#================================================================================================
+
+def extract_coingecko_data(ticker_input: str):
 
     #Final query
-    final_url = f"{BASE_URL}{ticker_input}&vs_currencies=usd"
+    final_url = f"{BASE_URL}{ticker_input}/market_chart?vs_currency=usd&days=1"
 
     try:
         response = requests.get(final_url, timeout=30)
@@ -32,13 +39,37 @@ def extract_data(ticker_input: str):
 
     return response.json()
 
-#Input:
-ticker = input("Enter the API-ID or CA: ")
+#Parameter for the Query
 
-dataset = extract_data(ticker)
+ticker = input("Enter API-ID: ")
+
+#Data Fetching
+raw_json = extract_coingecko_data(ticker)
+
+#================================================================================================
+#       Transform to DataFrame
+#================================================================================================
+
+def transform_to_dataframe(data:dict):
+
+    #Input Validation
+
+    if not isinstance(data, dict):
+        raise TypeError("Data is not in a supported format!")
+
+    #Extract Price Values
+    prices = dict(raw_json["prices"])
+
+    time_ms = prices.keys()
+    time = [datetime.datetime.fromtimestamp(item/1000) for item in prices]
+
+    price = list(prices.values())
+
+    return pd.DataFrame({"Time" : time, "Price [$]" : price})
+
+dataset = transform_to_dataframe(raw_json)
 
 print(dataset)
-   
 
 
 
